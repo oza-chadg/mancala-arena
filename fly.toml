@@ -1,5 +1,4 @@
-# Change this to a globally unique Fly app name before deploying.
-app = "mancala-kalah-online"
+app = "mancala-arena-chadg"
 primary_region = "syd"
 
 [build]

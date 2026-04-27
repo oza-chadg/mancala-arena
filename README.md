@@ -14,7 +14,7 @@ Open `http://localhost:3000`.
 
 ## Deploy to Fly.io
 
-This repo includes a Dockerfile and `fly.toml` for a low-cost single-machine Fly deployment.
+This repo includes a Dockerfile and `fly.toml` for a low-cost single-machine Fly deployment. The current Fly app name is `mancala-arena-chadg`.
 
 Before deploying, change the `app` value in `fly.toml` to a globally unique Fly app name. The default region is `syd`; change `primary_region` if you want the app closer to another player base.
 
