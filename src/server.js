@@ -10,6 +10,7 @@ import { InMemoryGameStore } from "./store/inMemoryGameStore.js";
 const __dirname = fileURLToPath(new URL(".", import.meta.url));
 const publicDir = normalize(join(__dirname, "..", "public"));
 const port = Number.parseInt(process.env.PORT ?? "3000", 10);
+const publicAppUrl = process.env.PUBLIC_APP_URL?.replace(/\/$/, "") ?? null;
 const store = new InMemoryGameStore();
 const socketPlayers = new Map();
 const botTurnTimers = new Map();
@@ -111,7 +112,10 @@ function scheduleBotTurn(gameId) {
 }
 
 function getJoinUrl(socket, gameId) {
-  const origin = socket.handshake.headers.origin || `http://localhost:${port}`;
+  const forwardedHost = socket.handshake.headers["x-forwarded-host"];
+  const host = forwardedHost || socket.handshake.headers.host;
+  const protocol = socket.handshake.headers["x-forwarded-proto"] || (host?.includes("localhost") ? "http" : "https");
+  const origin = publicAppUrl || (host ? `${protocol}://${host}` : `http://localhost:${port}`);
   return `${origin}/?gameId=${encodeURIComponent(gameId)}`;
 }
 

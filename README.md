@@ -31,6 +31,7 @@ The Fly config uses:
 - `auto_stop_machines = "suspend"`
 - `auto_start_machines = true`
 - `min_machines_running = 0`
+- `PUBLIC_APP_URL = "https://mancala-arena-chadg.fly.dev"` for generated invite links
 
 That keeps idle cost low and lets Fly wake the app on traffic. Because game state is currently in memory, active games can be lost on deploys, cold starts, or any non-resumable machine restart. Keep the app to one machine until the store is moved to Redis or Postgres and Socket.IO is configured for multi-node operation.
 
