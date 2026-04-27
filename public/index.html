@@ -64,8 +64,29 @@
       </section>
 
       <section class="game-area">
-        <div id="boardWrap" class="board-wrap" aria-live="polite">
-          <div id="board" class="board"></div>
+        <div class="play-column">
+          <div id="boardWrap" class="board-wrap" aria-live="polite">
+            <div id="board" class="board"></div>
+          </div>
+
+          <section class="rules-panel">
+            <div>
+              <span class="label">Rules</span>
+              <h2>How to Play</h2>
+            </div>
+            <ol class="rules-list">
+              <li>Choose one of your non-empty pits.</li>
+              <li>Sow counter-clockwise, skipping your opponent's store.</li>
+              <li>Land in your store for another turn.</li>
+              <li>Land in an empty pit on your side to capture opposite stones.</li>
+              <li>Empty one side to end the game; highest store wins.</li>
+            </ol>
+          </section>
+
+          <section class="message-row">
+            <p id="message">Create a game, then send the invite link to another player.</p>
+            <button id="rematchButton" class="hidden" type="button">Rematch</button>
+          </section>
         </div>
 
         <aside class="side-panel">
@@ -76,18 +97,6 @@
             </button>
             <ol id="moveHistoryList" class="move-history-list">
               <li>No moves yet</li>
-            </ol>
-          </section>
-
-          <section class="rules-panel">
-            <span class="label">Rules</span>
-            <h2>How to Play</h2>
-            <ol class="rules-list">
-              <li>Choose one of your non-empty pits on your turn.</li>
-              <li>Drop those stones one by one counter-clockwise, skipping your opponent's store.</li>
-              <li>Land in your own store to take another turn.</li>
-              <li>Land in an empty pit on your side to capture that stone plus the opposite stones.</li>
-              <li>When one side is empty, the other player sweeps remaining stones into their store. Highest store wins.</li>
             </ol>
           </section>
         </aside>
@@ -102,10 +111,6 @@
         <div id="resultStats" class="result-stats"></div>
       </section>
 
-      <section class="message-row">
-        <p id="message">Create a game, then send the invite link to another player.</p>
-        <button id="rematchButton" class="hidden" type="button">Rematch</button>
-      </section>
     </main>
 
     <script src="/socket.io/socket.io.js"></script>
