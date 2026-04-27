@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Mancala Kalah</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <section class="topbar">
+        <div>
+          <p class="eyebrow">Online Kalah</p>
+          <h1>Mancala</h1>
+        </div>
+        <div class="topbar-actions">
+          <button id="createGameButton" type="button">Create Game</button>
+          <label class="difficulty-picker" for="botDifficultySelect">
+            <span>Bot</span>
+            <select id="botDifficultySelect">
+              <option value="easy">Easy</option>
+              <option value="normal" selected>Normal</option>
+              <option value="hard">Hard</option>
+            </select>
+            <small id="botDifficultyDescription">Tactical moves</small>
+          </label>
+          <button id="createBotGameButton" type="button">Play vs Bot</button>
+        </div>
+      </section>
+
+      <section class="status-panel">
+        <div>
+          <span class="label">You</span>
+          <strong id="localPlayer">Not seated</strong>
+        </div>
+        <div>
+          <span class="label">Turn</span>
+          <strong id="turnLabel">Create or join a game</strong>
+        </div>
+        <div>
+          <span class="label">Status</span>
+          <strong id="statusLabel">Idle</strong>
+        </div>
+        <div>
+          <span class="label">Seats</span>
+          <strong id="connectionLabel">No players seated</strong>
+        </div>
+      </section>
+
+      <section id="invitePanel" class="invite-panel hidden">
+        <label for="inviteLink">Invite link</label>
+        <div class="copy-row">
+          <input id="inviteLink" type="text" readonly />
+          <button id="copyInviteButton" type="button">Copy</button>
+        </div>
+      </section>
+
+      <section id="turnBanner" class="turn-banner" aria-live="polite">
+        <div>
+          <span class="label">Table</span>
+          <h2 id="turnBannerTitle">Ready to play</h2>
+        </div>
+        <p id="turnBannerDetail">Create a game, then send the invite link to another player.</p>
+      </section>
+
+      <section class="game-area">
+        <div id="boardWrap" class="board-wrap" aria-live="polite">
+          <div id="board" class="board"></div>
+        </div>
+
+        <aside id="historyPanel" class="history-panel" aria-live="polite">
+          <button id="historyToggle" class="panel-heading" type="button" aria-expanded="true" aria-controls="moveHistoryList">
+            <span class="label">Moves</span>
+            <strong id="historyCount">0</strong>
+          </button>
+          <ol id="moveHistoryList" class="move-history-list">
+            <li>No moves yet</li>
+          </ol>
+        </aside>
+      </section>
+
+      <section id="resultPanel" class="result-panel hidden" aria-live="polite">
+        <div>
+          <span class="label">Result</span>
+          <h2 id="resultTitle">Game over</h2>
+        </div>
+        <p id="resultScore">Final score pending</p>
+        <div id="resultStats" class="result-stats"></div>
+      </section>
+
+      <section class="message-row">
+        <p id="message">Create a game, then send the invite link to another player.</p>
+        <button id="rematchButton" class="hidden" type="button">Rematch</button>
+      </section>
+    </main>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="/client.js" type="module"></script>
+  </body>
+</html>
