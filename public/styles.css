@@ -25,6 +25,8 @@ button {
   border-radius: 8px;
   cursor: pointer;
   touch-action: manipulation;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
 }
 
 button:disabled {
@@ -831,15 +833,16 @@ h1 {
   }
 
   .board-wrap {
-    overflow-x: visible;
+    overflow-x: auto;
     padding: 9px;
+    -webkit-overflow-scrolling: touch;
   }
 
   .board {
-    grid-template-columns: 44px repeat(6, minmax(0, 1fr)) 44px;
-    grid-template-rows: repeat(2, 74px);
+    grid-template-columns: 42px repeat(6, minmax(44px, 1fr)) 42px;
+    grid-template-rows: repeat(2, 84px);
     gap: 5px;
-    min-width: 0;
+    min-width: 390px;
     width: 100%;
   }
 
@@ -848,7 +851,7 @@ h1 {
   }
 
   .pit {
-    min-height: 64px;
+    min-height: 74px;
     padding: 6px 3px;
   }
 

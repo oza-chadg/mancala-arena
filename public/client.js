@@ -6,9 +6,6 @@ let gameState = null;
 let localPlayer = null;
 let playerToken = null;
 let animationTimers = [];
-let previewTouchTimer = null;
-let suppressNextClick = false;
-let suppressClickPit = null;
 const reducedMotionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
 const SOW_STEP_DELAY_MS = 180;
 const SOW_ANIMATION_MS = 680;
@@ -76,6 +73,10 @@ function isMobileViewport() {
   return window.matchMedia("(max-width: 720px)").matches;
 }
 
+function hasHoverInput() {
+  return window.matchMedia("(hover: hover) and (pointer: fine)").matches;
+}
+
 function capitalize(value) {
   return value ? `${value[0].toUpperCase()}${value.slice(1)}` : "";
 }
@@ -86,11 +87,6 @@ function clearAnimationTimers() {
 }
 
 function clearPreview() {
-  if (previewTouchTimer) {
-    window.clearTimeout(previewTouchTimer);
-    previewTouchTimer = null;
-  }
-
   elements.board
     .querySelectorAll(".is-preview-origin, .is-preview-path, .is-preview-last, .is-preview-capture, .is-preview-store")
     .forEach((slot) => {
@@ -595,27 +591,13 @@ function renderPit(pitIndex) {
     `${playerSideLabel(owner)} pit ${getPitNumber(pitIndex)} with ${gameState.board.pits[pitIndex]} stones`
   );
   button.innerHTML = renderStoneContents(gameState.board.pits[pitIndex], "", isMobileViewport() ? 8 : 24);
-  button.addEventListener("mouseenter", () => showMovePreview(pitIndex));
-  button.addEventListener("mouseleave", clearPreview);
+  if (hasHoverInput()) {
+    button.addEventListener("mouseenter", () => showMovePreview(pitIndex));
+    button.addEventListener("mouseleave", clearPreview);
+  }
   button.addEventListener("focus", () => showMovePreview(pitIndex));
   button.addEventListener("blur", clearPreview);
-  button.addEventListener("touchstart", () => startTouchPreview(pitIndex), { passive: true });
-  button.addEventListener("touchcancel", clearPreview);
-  button.addEventListener("touchend", () => {
-    if (previewTouchTimer) {
-      window.clearTimeout(previewTouchTimer);
-      previewTouchTimer = null;
-    }
-  });
   button.addEventListener("click", () => {
-    if (suppressNextClick && suppressClickPit === pitIndex) {
-      suppressNextClick = false;
-      suppressClickPit = null;
-      return;
-    }
-    suppressNextClick = false;
-    suppressClickPit = null;
-
     clearPreview();
     socket.emit("makeMove", {
       gameId: gameState.id,
@@ -668,23 +650,6 @@ function showMovePreview(pitIndex) {
   }
 
   elements.turnBannerDetail.textContent = previewSummary(preview);
-}
-
-function startTouchPreview(pitIndex) {
-  if (!canClickPit(pitIndex)) {
-    return;
-  }
-
-  if (previewTouchTimer) {
-    window.clearTimeout(previewTouchTimer);
-  }
-
-  previewTouchTimer = window.setTimeout(() => {
-    showMovePreview(pitIndex);
-    suppressNextClick = true;
-    suppressClickPit = pitIndex;
-    previewTouchTimer = null;
-  }, 360);
 }
 
 function renderBoard() {
