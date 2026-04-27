@@ -68,14 +68,28 @@
           <div id="board" class="board"></div>
         </div>
 
-        <aside id="historyPanel" class="history-panel" aria-live="polite">
-          <button id="historyToggle" class="panel-heading" type="button" aria-expanded="true" aria-controls="moveHistoryList">
-            <span class="label">Moves</span>
-            <strong id="historyCount">0</strong>
-          </button>
-          <ol id="moveHistoryList" class="move-history-list">
-            <li>No moves yet</li>
-          </ol>
+        <aside class="side-panel">
+          <section id="historyPanel" class="history-panel" aria-live="polite">
+            <button id="historyToggle" class="panel-heading" type="button" aria-expanded="true" aria-controls="moveHistoryList">
+              <span class="label">Moves</span>
+              <strong id="historyCount">0</strong>
+            </button>
+            <ol id="moveHistoryList" class="move-history-list">
+              <li>No moves yet</li>
+            </ol>
+          </section>
+
+          <section class="rules-panel">
+            <span class="label">Rules</span>
+            <h2>How to Play</h2>
+            <ol class="rules-list">
+              <li>Choose one of your non-empty pits on your turn.</li>
+              <li>Drop those stones one by one counter-clockwise, skipping your opponent's store.</li>
+              <li>Land in your own store to take another turn.</li>
+              <li>Land in an empty pit on your side to capture that stone plus the opposite stones.</li>
+              <li>When one side is empty, the other player sweeps remaining stones into their store. Highest store wins.</li>
+            </ol>
+          </section>
         </aside>
       </section>
 

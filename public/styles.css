@@ -115,6 +115,7 @@ h1 {
 .message-row,
 .turn-banner,
 .history-panel,
+.rules-panel,
 .result-panel {
   border: 1px solid #d6d8ce;
   border-radius: 8px;
@@ -204,6 +205,12 @@ h1 {
   grid-template-columns: minmax(0, 1fr) 280px;
   gap: 16px;
   align-items: stretch;
+}
+
+.side-panel {
+  display: grid;
+  gap: 16px;
+  align-content: start;
 }
 
 .board-wrap {
@@ -412,6 +419,31 @@ h1 {
   flex-direction: column;
   min-height: 272px;
   padding: 14px 16px;
+}
+
+.rules-panel {
+  padding: 14px 16px;
+}
+
+.rules-panel h2 {
+  margin: 0 0 8px;
+  font-size: 1rem;
+  line-height: 1.15;
+}
+
+.rules-list {
+  display: grid;
+  gap: 7px;
+  margin: 0;
+  padding-left: 20px;
+  color: #2f3d34;
+  font-size: 0.9rem;
+  line-height: 1.35;
+}
+
+.rules-list li::marker {
+  color: #2f5f8e;
+  font-weight: 800;
 }
 
 .panel-heading {
@@ -874,6 +906,23 @@ h1 {
     min-height: 0;
     padding: 0;
     overflow: hidden;
+  }
+
+  .side-panel {
+    gap: 10px;
+  }
+
+  .rules-panel {
+    padding: 10px 12px;
+  }
+
+  .rules-panel h2 {
+    font-size: 0.95rem;
+  }
+
+  .rules-list {
+    gap: 5px;
+    font-size: 0.82rem;
   }
 
   .panel-heading {
