@@ -6,6 +6,7 @@ let gameState = null;
 let localPlayer = null;
 let playerToken = null;
 let animationTimers = [];
+let copyFeedbackTimer = null;
 const reducedMotionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
 const SOW_STEP_DELAY_MS = 180;
 const SOW_ANIMATION_MS = 680;
@@ -29,6 +30,7 @@ const elements = {
   createBotGameButton: document.querySelector("#createBotGameButton"),
   createGameButton: document.querySelector("#createGameButton"),
   copyInviteButton: document.querySelector("#copyInviteButton"),
+  copyStatus: document.querySelector("#copyStatus"),
   historyCount: document.querySelector("#historyCount"),
   historyPanel: document.querySelector("#historyPanel"),
   historyToggle: document.querySelector("#historyToggle"),
@@ -67,6 +69,29 @@ function saveToken(gameId, token) {
 
 function setMessage(text) {
   elements.message.textContent = text;
+}
+
+function scrollToTop() {
+  window.scrollTo({
+    top: 0,
+    behavior: reducedMotionQuery.matches ? "auto" : "smooth"
+  });
+}
+
+function showCopyFeedback() {
+  if (copyFeedbackTimer) {
+    window.clearTimeout(copyFeedbackTimer);
+  }
+
+  elements.copyInviteButton.textContent = "Copied";
+  elements.copyInviteButton.classList.add("is-copied");
+  elements.copyStatus.textContent = "Link copied";
+  copyFeedbackTimer = window.setTimeout(() => {
+    elements.copyInviteButton.textContent = "Copy";
+    elements.copyInviteButton.classList.remove("is-copied");
+    elements.copyStatus.textContent = "";
+    copyFeedbackTimer = null;
+  }, 1800);
 }
 
 function isMobileViewport() {
@@ -856,9 +881,11 @@ updateHistoryDisclosure();
 elements.copyInviteButton.addEventListener("click", async () => {
   try {
     await navigator.clipboard.writeText(elements.inviteLink.value);
+    showCopyFeedback();
     setMessage("Invite link copied.");
   } catch {
     elements.inviteLink.select();
+    elements.copyStatus.textContent = "Link selected";
     setMessage("Copy permission was blocked. The invite link is selected.");
   }
 });
@@ -868,6 +895,7 @@ elements.rematchButton.addEventListener("click", () => {
     return;
   }
 
+  scrollToTop();
   socket.emit("requestRematch", {
     gameId: gameState.id,
     playerToken
@@ -877,6 +905,9 @@ elements.rematchButton.addEventListener("click", () => {
 socket.on("gameCreated", ({ gameId, playerToken: token, player = "one", joinUrl, gameState: state }) => {
   elements.inviteLink.value = joinUrl;
   receiveSeat({ state, token, player });
+  if (state.status !== "waiting") {
+    scrollToTop();
+  }
   setMessage(state.status === "waiting" ? `Game ${gameId} created. Share the invite link.` : "Rematch started.");
 });
 
