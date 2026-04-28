@@ -50,24 +50,11 @@ Then push to `main` or run the **Deploy to Cloudflare Workers** workflow manuall
 
 For solo practice, choose **Easy**, **Normal**, or **Hard**, then click **Play vs Bot**. The Durable Object seats a practice bot as player two and applies bot moves authoritatively after your turns.
 
-## Fly.io Legacy Path
-
-The repo still contains the previous Docker/Fly files and `src/server.js` while the Cloudflare deployment is being verified. That older path uses Socket.IO and in-memory storage, so active games can be lost on deploys, cold starts, or non-resumable machine restarts.
-
-To run the old Node server locally:
-
-```bash
-npm run dev:node
-```
-
-The browser client now targets the Cloudflare-style REST and raw WebSocket API, so use Wrangler for normal local development. The Fly GitHub Actions workflow is manual-only to avoid accidentally deploying the legacy server after the client migration.
-
 ## Project Shape
 
 - `src/game/*` contains the pure Kalah rules engine.
 - `src/worker/gameRoomController.js` contains the Cloudflare-independent game-room controller used by tests and the Durable Object.
 - `src/worker/index.js` contains the Worker routes and `GameRoom` Durable Object.
-- `src/store/inMemoryGameStore.js` and `src/server.js` are the legacy Node/Fly path.
 - `public/*` contains the plain HTML/CSS/JS browser UI.
 - `tests/*` covers the rules engine, bot move selection, rematches, and game-room controller behavior.
 
