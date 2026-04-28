@@ -1,10 +1,13 @@
-name: Deploy to Fly.io
+name: Deploy to Cloudflare Workers
 
 on:
+  push:
+    branches:
+      - main
   workflow_dispatch:
 
 concurrency:
-  group: fly-deploy
+  group: cloudflare-deploy
   cancel-in-progress: true
 
 jobs:
@@ -35,10 +38,9 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v4
 
-      - name: Set up flyctl
-        uses: superfly/flyctl-actions/setup-flyctl@master
-
-      - name: Deploy to Fly.io
-        run: flyctl deploy --remote-only
-        env:
-          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+      - name: Deploy Worker
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: deploy
