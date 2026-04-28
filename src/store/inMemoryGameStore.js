@@ -3,10 +3,12 @@ import { normalizeBotDifficulty } from "../game/chooseBotMove.js";
 import { createInitialGameState } from "../game/createInitialGameState.js";
 
 export const GAME_EXPIRY_MS = {
-  waiting: 30 * 60 * 1000,
+  waiting: 24 * 60 * 60 * 1000,
   in_progress: 24 * 60 * 60 * 1000,
   completed: 2 * 60 * 60 * 1000
 };
+
+export const EXPIRED_GAME_REASON = "This invite has expired or the server restarted. Create a new game to keep playing.";
 
 function createShortId() {
   return randomUUID().replaceAll("-", "").slice(0, 10);
@@ -60,7 +62,7 @@ export class InMemoryGameStore {
 
   getExpiredReason(gameId) {
     return this.expiredGameIds.has(gameId)
-      ? "This game has expired. Create a new game to keep playing."
+      ? EXPIRED_GAME_REASON
       : "Game not found.";
   }
 

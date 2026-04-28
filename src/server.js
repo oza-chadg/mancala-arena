@@ -5,7 +5,7 @@ import { fileURLToPath } from "node:url";
 import { Server } from "socket.io";
 import { applyMove } from "./game/applyMove.js";
 import { chooseBotMove } from "./game/chooseBotMove.js";
-import { InMemoryGameStore } from "./store/inMemoryGameStore.js";
+import { EXPIRED_GAME_REASON, InMemoryGameStore } from "./store/inMemoryGameStore.js";
 
 const __dirname = fileURLToPath(new URL(".", import.meta.url));
 const publicDir = normalize(join(__dirname, "..", "public"));
@@ -123,7 +123,7 @@ function cleanupExpiredGames() {
   for (const gameId of store.cleanupExpiredGames()) {
     clearBotTimer(gameId);
     io.to(gameId).emit("gameExpired", {
-      reason: "This game has expired. Create a new game to keep playing."
+      reason: EXPIRED_GAME_REASON
     });
   }
 }

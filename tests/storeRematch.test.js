@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { InMemoryGameStore } from "../src/store/inMemoryGameStore.js";
+import { EXPIRED_GAME_REASON, GAME_EXPIRY_MS, InMemoryGameStore } from "../src/store/inMemoryGameStore.js";
 
 function completedGame(store) {
   const created = store.createGame();
@@ -110,7 +110,7 @@ test("expired games are removed during cleanup", () => {
 
   assert.deepEqual(expiredGameIds, [created.gameId]);
   assert.equal(store.getGame(created.gameId), null);
-  assert.equal(store.getExpiredReason(created.gameId), "This game has expired. Create a new game to keep playing.");
+  assert.equal(store.getExpiredReason(created.gameId), EXPIRED_GAME_REASON);
 });
 
 test("joining an expired game returns an expiry message", () => {
@@ -121,5 +121,9 @@ test("joining an expired game returns an expiry message", () => {
   const result = store.joinGame(created.gameId);
 
   assert.equal(result.ok, false);
-  assert.equal(result.reason, "This game has expired. Create a new game to keep playing.");
+  assert.equal(result.reason, EXPIRED_GAME_REASON);
+});
+
+test("waiting invites stay open long enough to share asynchronously", () => {
+  assert.equal(GAME_EXPIRY_MS.waiting, 24 * 60 * 60 * 1000);
 });

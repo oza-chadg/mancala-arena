@@ -61,6 +61,8 @@ Add the full token output as a GitHub repository secret named `FLY_API_TOKEN`, t
 5. Refreshing or reopening the same browser reconnects using the player token stored in `localStorage`.
 6. The table shows turn state, connection state, recent move history, final results, and a two-player rematch request flow.
 
+Unjoined invite links are kept for 24 hours while the server process is still running. Because storage is currently in memory, links can still become invalid after a deploy, restart, or non-resumable host wakeup until the store is moved to Redis, Postgres, or another durable backend.
+
 For solo practice, choose **Easy**, **Normal**, or **Hard**, then click **Play vs Bot**. The server seats a practice bot as player two and applies the bot's moves authoritatively after your turns.
 
 ## Project Shape

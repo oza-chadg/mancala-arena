@@ -619,10 +619,11 @@ function renderPit(pitIndex) {
   if (hasHoverInput()) {
     button.addEventListener("mouseenter", () => showMovePreview(pitIndex));
     button.addEventListener("mouseleave", clearPreview);
+    button.addEventListener("focus", () => showMovePreview(pitIndex));
+    button.addEventListener("blur", clearPreview);
   }
-  button.addEventListener("focus", () => showMovePreview(pitIndex));
-  button.addEventListener("blur", clearPreview);
   button.addEventListener("click", () => {
+    button.blur();
     clearPreview();
     socket.emit("makeMove", {
       gameId: gameState.id,
