@@ -1,6 +1,6 @@
 # Mancala/Kalah Online
 
-A small real-time two-player Kalah app. The Node.js server owns all game state, validates every move, applies the rules, and broadcasts safe public state through Socket.IO.
+A small real-time Kalah app with two-player invites, reconnect tokens, rematches, bot practice, move history, and a mobile-friendly board. The rules engine stays pure JavaScript; the Cloudflare version stores each game in its own Durable Object and talks to the browser over raw WebSockets.
 
 ## Run Locally
 
@@ -12,45 +12,32 @@ npm run dev
 
 Open `http://localhost:3000`.
 
-## Deploy to Fly.io
+`npm run dev` starts Wrangler on port 3000, serves `public/` as Workers static assets, and runs the Worker/Durable Object backend locally.
 
-This repo includes a Dockerfile and `fly.toml` for a low-cost single-machine Fly deployment. The current Fly app name is `mancala-arena-chadg`.
+## Cloudflare Deployment
 
-Before deploying, change the `app` value in `fly.toml` to a globally unique Fly app name. The default region is `syd`; change `primary_region` if you want the app closer to another player base.
-
-```bash
-fly auth login
-fly launch --copy-config --name your-unique-app-name --region syd
-fly deploy
-fly scale count 1
-```
-
-The Fly config uses:
-
-- one 256 MB shared CPU machine
-- `auto_stop_machines = "suspend"`
-- `auto_start_machines = true`
-- `min_machines_running = 0`
-- `PUBLIC_APP_URL = "https://mancala-arena-chadg.fly.dev"` for generated invite links
-
-That keeps idle cost low and lets Fly wake the app on traffic. Because game state is currently in memory, active games can be lost on deploys, cold starts, or any non-resumable machine restart. Keep the app to one machine until the store is moved to Redis or Postgres and Socket.IO is configured for multi-node operation.
-
-## Deploy with GitHub Actions
-
-The repository includes `.github/workflows/fly-deploy.yml`. It runs tests, then deploys to Fly.io on pushes to `main` and on manual workflow dispatch.
-
-One-time setup:
+The Cloudflare entrypoint is `src/worker/index.js`, configured by `wrangler.toml`.
 
 ```bash
-git init -b main
-git add .
-git commit -m "Initial Mancala app"
-fly auth login
-fly launch --copy-config --name your-unique-app-name --region syd --no-deploy
-fly tokens create deploy -x 999999h
+npm run dev:cf
+npm run deploy:cf
 ```
 
-Add the full token output as a GitHub repository secret named `FLY_API_TOKEN`, then push `main` to GitHub. Future pushes to `main` will run tests and deploy with `flyctl deploy --remote-only`.
+The Worker exposes:
+
+- `POST /api/games` to create a two-player invite game
+- `POST /api/bot-games` to create a solo practice game
+- `GET /ws/:gameId?playerToken=...` for game WebSockets
+- static assets from `public/`
+
+Each `gameId` maps to one `GameRoom` Durable Object. The Durable Object owns private player tokens, game state, connection state, bot turns, rematches, expiry, and persistence. It uses Durable Object alarms for bot turns and stale-game cleanup so idle games can hibernate.
+
+For GitHub Actions deployment, add these repository secrets:
+
+- `CLOUDFLARE_API_TOKEN`
+- `CLOUDFLARE_ACCOUNT_ID`
+
+Then push to `main` or run the **Deploy to Cloudflare Workers** workflow manually.
 
 ## Basic Flow
 
@@ -61,37 +48,33 @@ Add the full token output as a GitHub repository secret named `FLY_API_TOKEN`, t
 5. Refreshing or reopening the same browser reconnects using the player token stored in `localStorage`.
 6. The table shows turn state, connection state, recent move history, final results, and a two-player rematch request flow.
 
-For solo practice, choose **Easy**, **Normal**, or **Hard**, then click **Play vs Bot**. The server seats a practice bot as player two and applies the bot's moves authoritatively after your turns.
+For solo practice, choose **Easy**, **Normal**, or **Hard**, then click **Play vs Bot**. The Durable Object seats a practice bot as player two and applies bot moves authoritatively after your turns.
 
 ## Project Shape
 
-- `src/game/*` contains the pure Kalah rules engine with no Socket.IO dependency.
-- `src/store/inMemoryGameStore.js` contains in-memory game records and private player tokens.
-- `src/server.js` serves the frontend and handles Socket.IO events.
-- `public/*` contains the simple browser UI.
-- `tests/gameRules.test.js` covers the deterministic rule engine behavior.
+- `src/game/*` contains the pure Kalah rules engine.
+- `src/worker/gameRoomController.js` contains the Cloudflare-independent game-room controller used by tests and the Durable Object.
+- `src/worker/index.js` contains the Worker routes and `GameRoom` Durable Object.
+- `public/*` contains the plain HTML/CSS/JS browser UI.
+- `tests/*` covers the rules engine, bot move selection, rematches, and game-room controller behavior.
 
-The store is deliberately isolated so it can later be replaced by Redis or Postgres without changing the rules engine.
+## WebSocket Protocol
 
-## Socket.IO Events
+Client messages:
 
-Client to server:
+- `{ "type": "makeMove", "pitIndex": 0 }`
+- `{ "type": "requestGameState" }`
+- `{ "type": "requestRematch" }`
 
-- `createGame`
-- `createBotGame`
-- `joinGame { gameId, playerToken? }`
-- `makeMove { gameId, playerToken, pitIndex }`
-- `requestGameState { gameId, playerToken }`
-- `requestRematch { gameId, playerToken }`
+Server messages:
 
-Server to client:
+- `{ "type": "gameCreated", "gameId": "...", "playerToken": "...", "joinUrl": "...", "gameState": {...} }`
+- `{ "type": "gameJoined", "playerToken": "...", "player": "one", "gameState": {...} }`
+- `{ "type": "gameUpdated", "gameState": {...} }`
+- `{ "type": "gameCompleted", "gameState": {...} }`
+- `{ "type": "playerDisconnected", "gameState": {...} }`
+- `{ "type": "playerReconnected", "gameState": {...} }`
+- `{ "type": "invalidMove", "reason": "..." }`
+- `{ "type": "gameExpired", "reason": "..." }`
 
-- `gameCreated { gameId, playerToken, joinUrl, gameState }`
-- `gameJoined { gameState, playerToken, player }`
-- `gameUpdated { gameState }`
-- `invalidMove { reason }`
-- `gameCompleted { gameState }`
-- `playerDisconnected { gameState }`
-- `playerReconnected { gameState }`
-
-Public game state also includes server-owned `moveHistory` and `rematchRequests` fields. Player tokens remain private and are never broadcast to opponents.
+Public game state includes server-owned `moveHistory` and `rematchRequests`. Player tokens remain private and are only sent to the browser that owns that seat.

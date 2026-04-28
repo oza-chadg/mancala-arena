@@ -1,10 +1,13 @@
-const socket = io();
 const params = new URLSearchParams(window.location.search);
 const initialGameId = params.get("gameId");
 
 let gameState = null;
 let localPlayer = null;
 let playerToken = null;
+let gameSocket = null;
+let reconnectTimer = null;
+let reconnectAttempts = 0;
+let isIntentionalSocketClose = false;
 let animationTimers = [];
 let copyFeedbackTimer = null;
 const reducedMotionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -65,6 +68,97 @@ function clearStoredToken(gameId) {
 
 function saveToken(gameId, token) {
   window.localStorage.setItem(tokenStorageKey(gameId), token);
+}
+
+function getSocketUrl(gameId, token) {
+  const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+  const url = new URL(`${protocol}//${window.location.host}/ws/${encodeURIComponent(gameId)}`);
+  if (token) {
+    url.searchParams.set("playerToken", token);
+  }
+  return url;
+}
+
+function closeGameSocket() {
+  if (!gameSocket) {
+    return;
+  }
+
+  isIntentionalSocketClose = true;
+  gameSocket.intentionalClose = true;
+  gameSocket.close();
+  gameSocket = null;
+}
+
+function connectGameSocket(gameId, token) {
+  closeGameSocket();
+  isIntentionalSocketClose = false;
+
+  const socket = new WebSocket(getSocketUrl(gameId, token));
+  gameSocket = socket;
+
+  socket.addEventListener("open", () => {
+    reconnectAttempts = 0;
+  });
+
+  socket.addEventListener("message", (event) => {
+    let message;
+    try {
+      message = JSON.parse(event.data);
+    } catch {
+      setMessage("Received an unreadable server message.");
+      return;
+    }
+
+    handleServerMessage(message);
+  });
+
+  socket.addEventListener("close", () => {
+    const wasIntentional = socket.intentionalClose || isIntentionalSocketClose;
+    if (gameSocket === socket) {
+      gameSocket = null;
+    }
+    if (wasIntentional || !gameState?.id || !playerToken) {
+      isIntentionalSocketClose = false;
+      return;
+    }
+
+    const delay = Math.min(6000, 800 + reconnectAttempts * 700);
+    reconnectAttempts += 1;
+    window.clearTimeout(reconnectTimer);
+    reconnectTimer = window.setTimeout(() => {
+      connectGameSocket(gameState.id, playerToken);
+    }, delay);
+  });
+
+  socket.addEventListener("error", () => {
+    setMessage("Connection interrupted. Reconnecting if the game is still available.");
+  });
+}
+
+function sendGameMessage(type, payload = {}) {
+  if (!gameSocket || gameSocket.readyState !== WebSocket.OPEN) {
+    setMessage("Still connecting to the game. Try again in a moment.");
+    return;
+  }
+
+  gameSocket.send(JSON.stringify({ type, ...payload }));
+}
+
+async function postJson(path, body = {}) {
+  const response = await fetch(path, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(body)
+  });
+
+  if (!response.ok) {
+    throw new Error(await response.text());
+  }
+
+  return response.json();
 }
 
 function setMessage(text) {
@@ -619,16 +713,13 @@ function renderPit(pitIndex) {
   if (hasHoverInput()) {
     button.addEventListener("mouseenter", () => showMovePreview(pitIndex));
     button.addEventListener("mouseleave", clearPreview);
+    button.addEventListener("focus", () => showMovePreview(pitIndex));
+    button.addEventListener("blur", clearPreview);
   }
-  button.addEventListener("focus", () => showMovePreview(pitIndex));
-  button.addEventListener("blur", clearPreview);
   button.addEventListener("click", () => {
+    button.blur();
     clearPreview();
-    socket.emit("makeMove", {
-      gameId: gameState.id,
-      playerToken,
-      pitIndex
-    });
+    sendGameMessage("makeMove", { pitIndex });
   });
   return button;
 }
@@ -843,14 +934,30 @@ function render() {
   }
 }
 
-elements.createGameButton.addEventListener("click", () => {
-  socket.emit("createGame");
+elements.createGameButton.addEventListener("click", async () => {
+  try {
+    const result = await postJson("/api/games");
+    elements.inviteLink.value = result.joinUrl;
+    receiveSeat({ state: result.gameState, token: result.playerToken, player: result.player ?? "one" });
+    connectGameSocket(result.gameId, result.playerToken);
+    setMessage(`Game ${result.gameId} created. Share the invite link.`);
+  } catch (error) {
+    setMessage(error.message || "Could not create a game.");
+  }
 });
 
-elements.createBotGameButton.addEventListener("click", () => {
-  socket.emit("createBotGame", {
-    difficulty: elements.botDifficultySelect.value
-  });
+elements.createBotGameButton.addEventListener("click", async () => {
+  try {
+    const result = await postJson("/api/bot-games", {
+      difficulty: elements.botDifficultySelect.value
+    });
+    elements.inviteLink.value = result.joinUrl;
+    receiveSeat({ state: result.gameState, token: result.playerToken, player: result.player ?? "one" });
+    connectGameSocket(result.gameId, result.playerToken);
+    setMessage("Bot game started.");
+  } catch (error) {
+    setMessage(error.message || "Could not start a bot game.");
+  }
 });
 
 elements.botDifficultySelect.addEventListener("change", updateBotDifficultyDescription);
@@ -896,73 +1003,77 @@ elements.rematchButton.addEventListener("click", () => {
   }
 
   scrollToTop();
-  socket.emit("requestRematch", {
-    gameId: gameState.id,
-    playerToken
-  });
+  sendGameMessage("requestRematch");
 });
 
-socket.on("gameCreated", ({ gameId, playerToken: token, player = "one", joinUrl, gameState: state }) => {
-  elements.inviteLink.value = joinUrl;
-  receiveSeat({ state, token, player });
-  if (state.status !== "waiting") {
-    scrollToTop();
+function handleServerMessage(message) {
+  if (message.type === "gameCreated") {
+    const { gameId, playerToken: token, player = "one", joinUrl, gameState: state } = message;
+    elements.inviteLink.value = joinUrl;
+    receiveSeat({ state, token, player });
+    connectGameSocket(gameId, token);
+    if (state.status !== "waiting") {
+      scrollToTop();
+    }
+    setMessage(state.status === "waiting" ? `Game ${gameId} created. Share the invite link.` : "Rematch started.");
+    return;
   }
-  setMessage(state.status === "waiting" ? `Game ${gameId} created. Share the invite link.` : "Rematch started.");
-});
 
-socket.on("gameJoined", ({ gameState: state, playerToken: token, player }) => {
-  receiveSeat({ state, token, player });
-  setMessage(state.status === "waiting" ? "Reconnected. Waiting for opponent." : "Joined game.");
-});
-
-socket.on("gameUpdated", ({ gameState: state }) => {
-  applyRemoteState(state);
-});
-
-socket.on("gameCompleted", ({ gameState: state }) => {
-  applyRemoteState(state);
-});
-
-socket.on("playerDisconnected", ({ gameState: state }) => {
-  applyRemoteState(state, { animate: false });
-  if (state.status !== "completed") {
-    setMessage("A player disconnected. They can rejoin with their saved browser token.");
+  if (message.type === "gameJoined") {
+    receiveSeat({ state: message.gameState, token: message.playerToken, player: message.player });
+    setMessage(message.gameState.status === "waiting" ? "Reconnected. Waiting for opponent." : "Joined game.");
+    return;
   }
-});
 
-socket.on("playerReconnected", ({ gameState: state }) => {
-  applyRemoteState(state, { animate: false });
-});
-
-socket.on("invalidMove", ({ reason }) => {
-  setMessage(reason);
-});
-
-socket.on("gameExpired", ({ reason }) => {
-  if (gameState?.id) {
-    clearStoredToken(gameState.id);
+  if (message.type === "gameUpdated") {
+    applyRemoteState(message.gameState);
+    return;
   }
-  gameState = null;
-  localPlayer = null;
-  playerToken = null;
-  clearGameUrl();
-  render();
-  setMessage(reason);
-});
+
+  if (message.type === "gameCompleted") {
+    applyRemoteState(message.gameState);
+    return;
+  }
+
+  if (message.type === "playerDisconnected") {
+    applyRemoteState(message.gameState, { animate: false });
+    if (message.gameState.status !== "completed") {
+      setMessage("A player disconnected. They can rejoin with their saved browser token.");
+    }
+    return;
+  }
+
+  if (message.type === "playerReconnected") {
+    applyRemoteState(message.gameState, { animate: false });
+    return;
+  }
+
+  if (message.type === "invalidMove") {
+    setMessage(message.reason);
+    return;
+  }
+
+  if (message.type === "gameExpired") {
+    if (gameState?.id) {
+      clearStoredToken(gameState.id);
+    }
+    isIntentionalSocketClose = true;
+    if (gameSocket) {
+      gameSocket.intentionalClose = true;
+      gameSocket.close();
+    }
+    gameState = null;
+    localPlayer = null;
+    playerToken = null;
+    clearGameUrl();
+    render();
+    setMessage(message.reason);
+  }
+}
 
 if (initialGameId) {
   const storedToken = getStoredToken(initialGameId);
-  if (storedToken) {
-    socket.emit("requestGameState", {
-      gameId: initialGameId,
-      playerToken: storedToken
-    });
-  } else {
-    socket.emit("joinGame", {
-      gameId: initialGameId
-    });
-  }
+  connectGameSocket(initialGameId, storedToken);
 }
 
 render();

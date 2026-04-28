@@ -308,7 +308,7 @@ h1 {
 }
 
 .pit:not(:disabled):hover,
-.pit:not(:disabled):focus {
+.pit:not(:disabled):focus-visible {
   outline: 3px solid #2ba783;
   outline-offset: -3px;
 }
